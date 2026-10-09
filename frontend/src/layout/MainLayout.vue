@@ -153,7 +153,19 @@ onBeforeUnmount(() => { if (pollTimer) window.clearInterval(pollTimer) })
   color: #5d7285;
   letter-spacing: 1px;
 }
-.menu-badge { margin-left: auto; margin-right: 8px; }
+.menu-badge {
+  margin-left: auto;
+  margin-right: 10px;
+  display: inline-flex;
+  align-items: center;
+}
+/* Element 徽章默认绝对定位（translateY(-50%) 浮出菜单行），在菜单项内改为行内居中 */
+.menu-badge :deep(.el-badge__content) {
+  position: static;
+  transform: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 .sidebar-foot {
   padding: 14px 16px;
   font-size: 11px;
