@@ -1,29 +1,49 @@
 <template>
   <div v-loading="loading">
+    <!-- 态势头部：标题 + 时间范围 + 数据新鲜度 + 主操作 -->
     <el-card shadow="never" class="block" :body-style="{ padding: '14px 18px' }">
-      <div class="onekey">
-        <div>
-          <div class="onekey-title">一键获取钓鱼站点列表</div>
-          <div class="dim">对词库全部 <b>{{ keywordCount }}</b> 个关键词执行四引擎采集 → 评分 → 取证 → AI 严判，
-            恶意站点自动进入封堵列表，可在「封堵管理」导出。</div>
+      <div class="saas-head">
+        <div class="saas-title">
+          <span class="pulse" :class="ov?.health.ai_configured ? 'on' : 'off'"></span>
+          <div>
+            <div class="h1">威胁态势总览</div>
+            <div class="dim">
+              数据新鲜度 {{ freshness }}
+              <template v-if="ov?.health.ai_configured">
+                · AI 研判链路就绪（{{ [ov.health.ai_model, ov.health.ai_vision_model, ov.health.ai_jev_model].filter(Boolean).join(' / ') }}）
+              </template>
+              <template v-else>· <b class="miss">未配置 AI</b>，全量降级人工复核</template>
+            </div>
+          </div>
         </div>
-        <el-button type="danger" size="large" :loading="starting" @click="oneKeyScan">
-          <el-icon class="btn-ico"><VideoPlay /></el-icon>
-          一键采集研判
-        </el-button>
+        <div class="head-actions">
+          <el-radio-group v-model="range" size="small" @change="reloadTrend">
+            <el-radio-button :value="7">近 7 天</el-radio-button>
+            <el-radio-button :value="30">近 30 天</el-radio-button>
+            <el-radio-button :value="90">近 90 天</el-radio-button>
+          </el-radio-group>
+          <el-button type="danger" :loading="starting" @click="oneKeyScan">
+            <el-icon class="btn-ico"><VideoPlay /></el-icon>
+            一键采集研判
+          </el-button>
+        </div>
       </div>
     </el-card>
 
-    <el-row :gutter="12">
+    <!-- KPI 指标行（含环比） -->
+    <el-row :gutter="12" class="block">
       <el-col v-for="card in cards" :key="card.label" :span="4">
         <el-card shadow="never" class="stat" :body-style="{ padding: '14px 16px' }">
           <div class="stat-row">
             <el-icon class="stat-ico" :style="{ background: card.bg, color: card.color }">
               <component :is="card.icon" />
             </el-icon>
-            <div>
+            <div class="stat-main">
               <div class="stat-num" :style="{ color: card.color }">{{ card.value }}</div>
               <div class="stat-label">{{ card.label }}</div>
+              <div v-if="card.delta !== undefined" class="stat-delta" :class="card.deltaClass">
+                {{ card.delta }}
+              </div>
             </div>
           </div>
         </el-card>
@@ -42,29 +62,54 @@
       </div>
     </el-alert>
 
+    <!-- 态势图组 -->
     <el-row :gutter="12" class="block">
-      <el-col :span="14">
+      <el-col :span="16">
         <el-card shadow="never">
           <template #header>
-            近 30 天研判趋势
+            研判趋势（{{ range }} 天）
             <el-tag v-if="trends?.agreement?.rate != null" size="small"
                     :type="(trends.agreement.rate ?? 0) >= 85 ? 'success' : 'warning'" class="ml">
               人机一致率 {{ trends.agreement.rate }}%
             </el-tag>
             <el-tag v-if="trends?.agreement?.ai_too_lenient" size="small" type="danger" class="ml">
-              AI 漏判 {{ trends.agreement.ai_too_lenient }}（人工确认恶意而 AI 未判出）
+              AI 漏判 {{ trends.agreement.ai_too_lenient }}
             </el-tag>
           </template>
           <div ref="trendEl" class="chart" />
         </el-card>
       </el-col>
-      <el-col :span="10">
+      <el-col :span="8">
         <el-card shadow="never" header="AI 裁决分布">
           <div ref="pieEl" class="chart" />
         </el-card>
       </el-col>
     </el-row>
 
+    <!-- 品牌仿冒 Top + 研判漏斗 -->
+    <el-row :gutter="12" class="block">
+      <el-col :span="12">
+        <el-card shadow="never" header="品牌被仿冒 Top 10（AI 判恶意）">
+          <div ref="brandEl" class="chart" />
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card shadow="never" header="研判漏斗">
+          <div class="funnel">
+            <div v-for="(s, i) in ov?.funnel ?? []" :key="s.stage" class="funnel-row">
+              <div class="funnel-stage">{{ s.stage }}</div>
+              <div class="funnel-bar-area">
+                <div class="funnel-bar" :style="funnelStyle(i, s.count)"></div>
+              </div>
+              <div class="funnel-num">{{ s.count }}</div>
+            </div>
+          </div>
+          <div class="dim funnel-hint">封堵率 {{ funnelRate }} · 存疑转人工占比 {{ reviewRate }}</div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 最近记录 + 系统健康 -->
     <el-row :gutter="12">
       <el-col :span="16">
         <el-card shadow="never" header="最近研判记录">
@@ -96,13 +141,39 @@
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card shadow="never" header="高频命中关键词" class="block">
-          <div class="kw-wrap">
-            <el-tag v-for="[kw, n] in summary?.top_keywords ?? []" :key="kw" class="kw" type="info" disable-transitions>
-              {{ kw }} · {{ n }}
-            </el-tag>
-            <el-empty v-if="!summary?.top_keywords?.length" description="暂无数据" :image-size="50" />
-          </div>
+        <el-card shadow="never" header="系统健康">
+          <el-descriptions :column="1" size="small" border class="block">
+            <el-descriptions-item label="AI 严判链路">
+              <el-tag :type="ov?.health.ai_configured ? 'success' : 'danger'" size="small">
+                {{ ov?.health.ai_configured ? '就绪' : '未配置' }}
+              </el-tag>
+              <span class="dim ml">{{ ov?.health.ai_model }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="视觉 / Jev 通道">
+              <span class="mono">{{ ov?.health.ai_vision_model || '—' }} / {{ ov?.health.ai_jev_model || '—' }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item label="采集词库">
+              {{ ov?.health.keywords_total ?? '-' }} 词 · 白名单 {{ ov?.health.whitelist ?? '-' }} 域
+            </el-descriptions-item>
+            <el-descriptions-item label="样本隔离库">
+              {{ ov?.health.samples ?? 0 }} 个 · 已分析 {{ ov?.health.samples_analyzed ?? 0 }}
+            </el-descriptions-item>
+            <el-descriptions-item label="人机一致率">
+              <el-tag v-if="trends?.agreement?.rate != null" size="small"
+                      :type="(trends.agreement.rate ?? 0) >= 85 ? 'success' : 'warning'">
+                {{ trends.agreement.rate }}%（n={{ trends.agreement.total }}）
+              </el-tag>
+              <span v-else class="dim">待人工反馈样本</span>
+            </el-descriptions-item>
+          </el-descriptions>
+          <el-card shadow="never" header="高频命中关键词" :body-style="{ padding: '10px 14px' }">
+            <div class="kw-wrap">
+              <el-tag v-for="[kw, n] in summary?.top_keywords ?? []" :key="kw" class="kw" type="info" disable-transitions>
+                {{ kw }} · {{ n }}
+              </el-tag>
+              <el-empty v-if="!summary?.top_keywords?.length" description="暂无数据" :image-size="40" />
+            </div>
+          </el-card>
         </el-card>
       </el-col>
     </el-row>
@@ -118,16 +189,39 @@ import { api } from '../api/client'
 import type { DashboardSummary } from '../api/types'
 import { dispositionTag, fmtIso, verdictTag } from '../lib/display'
 
+interface Overview {
+  kpi: { new_today: number; new_yesterday: number; blocked_today: number; blocked_total: number; total: number }
+  brand_top: { brand: string; count: number }[]
+  funnel: { stage: string; count: number }[]
+  health: {
+    ai_configured: boolean; ai_model: string; ai_vision_model: string | null; ai_jev_model: string | null
+    samples: number; samples_analyzed: number; keywords_total: number; whitelist?: number
+    data_freshness: number | null
+  }
+}
+
 const router = useRouter()
 const loading = ref(true)
 const starting = ref(false)
 const keywordCount = ref(0)
+const range = ref(30)
 const summary = ref<DashboardSummary | null>(null)
+const ov = ref<Overview | null>(null)
 const trends = ref<{ series: { date: string; discovered: number; blocked: number; human_review: number }[]; agreement: { rate: number | null; total: number; ai_too_strict: number; ai_too_lenient: number } } | null>(null)
 const trendEl = ref<HTMLDivElement>()
 const pieEl = ref<HTMLDivElement>()
+const brandEl = ref<HTMLDivElement>()
 let chart1: echarts.ECharts | null = null
 let chart2: echarts.ECharts | null = null
+let chart3: echarts.ECharts | null = null
+
+const freshness = computed(() => {
+  const s = ov.value?.health.data_freshness
+  if (s == null) return '暂无数据'
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))} 分钟前`
+  if (s < 86400) return `${Math.round(s / 3600)} 小时前`
+  return `${Math.round(s / 86400)} 天前`
+})
 
 async function oneKeyScan() {
   try {
@@ -148,14 +242,43 @@ async function oneKeyScan() {
   }
 }
 
-const cards = computed(() => [
-  { label: '累计研判域名', value: summary.value?.total ?? 0, color: '#2563eb', bg: '#eff6ff', icon: 'Search' },
-  { label: '生效封堵', value: summary.value?.blocked_active ?? 0, color: '#dc2626', bg: '#fef2f2', icon: 'Lock' },
-  { label: '待人工复核', value: summary.value?.pending_review ?? 0, color: '#d97706', bg: '#fffbeb', icon: 'Checked' },
-  { label: '确认恶意', value: summary.value?.malicious ?? 0, color: '#b91c1c', bg: '#fef2f2', icon: 'WarningFilled' },
-  { label: '误报回滚', value: summary.value?.false_positives ?? 0, color: '#64748b', bg: '#f8fafc', icon: 'RefreshLeft' },
-  { label: '正常/放行', value: summary.value?.allowed ?? 0, color: '#16a34a', bg: '#f0fdf4', icon: 'CircleCheck' },
-])
+const cards = computed(() => {
+  const kpi = ov.value?.kpi
+  const today = kpi?.new_today ?? 0
+  const yesterday = kpi?.new_yesterday ?? 0
+  const delta = yesterday > 0 ? Math.round((today - yesterday) / yesterday * 100)
+    : (today > 0 ? 100 : null)
+  const deltaText = delta === null ? undefined
+    : `${delta >= 0 ? '↑' : '↓'} ${Math.abs(delta)}% 较昨日`
+  return [
+    { label: '累计研判域名', value: summary.value?.total ?? 0, color: '#2563eb', bg: '#eff6ff', icon: 'Search',
+      delta: `今日 +${today}`, deltaClass: 'up' },
+    { label: '生效封堵', value: summary.value?.blocked_active ?? 0, color: '#dc2626', bg: '#fef2f2', icon: 'Lock',
+      delta: `今日 +${kpi?.blocked_today ?? 0}`, deltaClass: 'up-bad' },
+    { label: '待人工复核', value: summary.value?.pending_review ?? 0, color: '#d97706', bg: '#fffbeb', icon: 'Checked' },
+    { label: '确认恶意', value: summary.value?.malicious ?? 0, color: '#b91c1c', bg: '#fef2f2', icon: 'WarningFilled' },
+    { label: '误报回滚', value: summary.value?.false_positives ?? 0, color: '#64748b', bg: '#f8fafc', icon: 'RefreshLeft' },
+    { label: '正常/放行', value: summary.value?.allowed ?? 0, color: '#16a34a', bg: '#f0fdf4', icon: 'CircleCheck' },
+  ].map(c => ({ ...c, delta: c.delta === `今日 +0` && c.label === '累计研判域名' ? deltaText : c.delta }))
+})
+
+const funnelMax = computed(() => Math.max(1, ...(ov.value?.funnel ?? []).map(s => s.count)))
+const funnelRate = computed(() => {
+  const f = ov.value?.funnel ?? []
+  if (f.length < 4 || !f[0].count) return '-'
+  return Math.round(f[3].count / f[0].count * 100) + '%'
+})
+const reviewRate = computed(() => {
+  const f = ov.value?.funnel ?? []
+  if (f.length < 5 || !f[0].count) return '-'
+  return Math.round(f[4].count / f[0].count * 100) + '%'
+})
+
+function funnelStyle(i: number, count: number) {
+  const colors = ['#2563eb', '#0891b2', '#7c3aed', '#dc2626', '#d97706']
+  const pct = Math.max(6, Math.round(count / funnelMax.value * 100))
+  return { width: pct + '%', background: colors[i % colors.length] }
+}
 
 function renderTrend() {
   if (!trendEl.value) return
@@ -197,21 +320,48 @@ function renderPie() {
                label: { formatter: '{b}: {c}' } }],
   })
 }
+
+function renderBrand() {
+  if (!brandEl.value) return
+  chart3 = chart3 ?? echarts.init(brandEl.value)
+  const top = (ov.value?.brand_top ?? []).slice().reverse()
+  chart3.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 90, right: 40, top: 10, bottom: 24 },
+    xAxis: { type: 'value', minInterval: 1 },
+    yAxis: { type: 'category', data: top.map(t => t.brand),
+             axisLabel: { fontSize: 12, color: '#334155' } },
+    series: [{
+      type: 'bar', data: top.map(t => t.count), barWidth: 14,
+      itemStyle: { color: '#dc2626', borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: 'right', fontSize: 11, color: '#64748b' },
+    }],
+  })
+}
+
+async function reloadTrend() {
+  trends.value = await api.dashboardTrends(range.value)
+  renderTrend()
+}
+
 function onResize() {
   chart1?.resize()
   chart2?.resize()
+  chart3?.resize()
 }
 
 onMounted(async () => {
   try {
     summary.value = await api.dashboard()
     keywordCount.value = (await api.keywords()).keywords.length
-    trends.value = await api.dashboardTrends()
+    trends.value = await api.dashboardTrends(range.value)
+    ov.value = await api.dashboardOverview()
   } finally {
     loading.value = false
   }
   renderTrend()
   renderPie()
+  renderBrand()
   window.addEventListener('resize', onResize)
 })
 
@@ -219,32 +369,53 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   chart1?.dispose()
   chart2?.dispose()
+  chart3?.dispose()
 })
 </script>
 
 <style scoped>
-.onekey { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.onekey-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.saas-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.saas-title { display: flex; align-items: center; gap: 12px; }
+.h1 { font-size: 17px; font-weight: 700; color: #1e293b; }
+.head-actions { display: flex; align-items: center; gap: 12px; }
+.pulse {
+  width: 10px; height: 10px; border-radius: 50%; flex: none;
+  animation: pulse 2s infinite;
+}
+.pulse.on { background: #16a34a; box-shadow: 0 0 0 rgba(22, 163, 74, .5); }
+.pulse.off { background: #dc2626; }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, .45); }
+  70% { box-shadow: 0 0 0 9px rgba(22, 163, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
 .dim { font-size: 12px; color: #64748b; }
 .btn-ico { margin-right: 4px; }
+.miss { color: #dc2626; }
+.ml { margin-left: 8px; }
+.mono { font-family: Menlo, Consolas, monospace; font-size: 12px; }
 .stat :deep(.el-card__body) { display: block; }
 .stat-row { display: flex; align-items: center; gap: 12px; }
 .stat-ico {
-  font-size: 20px;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
+  font-size: 20px; width: 40px; height: 40px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
 }
+.stat-main { min-width: 0; }
 .stat-num { font-size: 24px; font-weight: 700; line-height: 1.1; }
 .stat-label { font-size: 12px; color: #64748b; margin-top: 3px; }
+.stat-delta { font-size: 11px; margin-top: 3px; }
+.stat-delta.up { color: #2563eb; }
+.stat-delta.up-bad { color: #dc2626; }
 .alert-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.miss { color: #dc2626; }
 .block { margin-top: 12px; }
 .chart { height: 260px; }
+.funnel { padding: 8px 4px 2px; }
+.funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.funnel-stage { width: 68px; font-size: 12px; color: #475569; text-align: right; flex: none; }
+.funnel-bar-area { flex: 1; min-width: 0; }
+.funnel-bar { height: 18px; border-radius: 3px; min-width: 22px; transition: width .4s ease; }
+.funnel-num { width: 44px; font-size: 13px; font-weight: 600; color: #1e293b; flex: none; }
+.funnel-hint { margin-top: 6px; }
 .kw-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
 .kw { margin: 0; }
 </style>

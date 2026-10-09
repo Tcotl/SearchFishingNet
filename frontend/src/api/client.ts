@@ -47,8 +47,10 @@ export const api = {
     }),
   // 看板
   dashboard: () => request<DashboardSummary>('/dashboard/summary'),
-  dashboardTrends: () =>
-    request<{ series: { date: string; discovered: number; blocked: number; human_review: number }[]; agreement: { rate: number | null; total: number; ai_too_strict: number; ai_too_lenient: number } }>('/dashboard/trends'),
+  dashboardTrends: (days = 30) =>
+    request<{ series: { date: string; discovered: number; blocked: number; human_review: number }[]; agreement: { rate: number | null; total: number; ai_too_strict: number; ai_too_lenient: number } }>(`/dashboard/trends?days=${days}`),
+  dashboardOverview: () =>
+    request<{ kpi: { new_today: number; new_yesterday: number; blocked_today: number; blocked_total: number; total: number }; brand_top: { brand: string; count: number }[]; funnel: { stage: string; count: number }[]; health: { ai_configured: boolean; ai_model: string; ai_vision_model: string | null; ai_jev_model: string | null; samples: number; samples_analyzed: number; keywords_total: number; whitelist?: number; data_freshness: number | null } }>('/dashboard/overview'),
   // 记录
   records: (query: Record<string, string | number | undefined>) => {
     const qs = new URLSearchParams()
