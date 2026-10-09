@@ -41,9 +41,7 @@
             <div class="stat-main">
               <div class="stat-num" :style="{ color: card.color }">{{ card.value }}</div>
               <div class="stat-label">{{ card.label }}</div>
-              <div v-if="card.delta !== undefined" class="stat-delta" :class="card.deltaClass">
-                {{ card.delta }}
-              </div>
+              <div class="stat-delta" :class="card.deltaClass">{{ card.delta ?? '&nbsp;' }}</div>
             </div>
           </div>
         </el-card>
@@ -63,7 +61,7 @@
     </el-alert>
 
     <!-- 态势图组 -->
-    <el-row :gutter="12" class="block">
+    <el-row :gutter="12" class="block equal">
       <el-col :span="16">
         <el-card shadow="never">
           <template #header>
@@ -87,7 +85,7 @@
     </el-row>
 
     <!-- 品牌仿冒 Top + 研判漏斗 -->
-    <el-row :gutter="12" class="block">
+    <el-row :gutter="12" class="block equal">
       <el-col :span="12">
         <el-card shadow="never" header="品牌被仿冒 Top 10（AI 判恶意）">
           <div ref="brandEl" class="chart" />
@@ -95,7 +93,7 @@
       </el-col>
       <el-col :span="12">
         <el-card shadow="never" header="研判漏斗">
-          <div class="funnel">
+          <div class="funnel" :style="{ height: '260px' }">
             <div v-for="(s, i) in ov?.funnel ?? []" :key="s.stage" class="funnel-row">
               <div class="funnel-stage">{{ s.stage }}</div>
               <div class="funnel-bar-area">
@@ -110,7 +108,7 @@
     </el-row>
 
     <!-- 最近记录 + 系统健康 -->
-    <el-row :gutter="12">
+    <el-row :gutter="12" class="equal">
       <el-col :span="16">
         <el-card shadow="never" header="最近研判记录">
           <el-table :data="summary?.recent ?? []" size="small"
@@ -141,7 +139,7 @@
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card shadow="never" header="系统健康">
+        <el-card shadow="never" header="系统健康" class="health-fill">
           <el-descriptions :column="1" size="small" border class="block">
             <el-descriptions-item label="AI 严判链路">
               <el-tag :type="ov?.health.ai_configured ? 'success' : 'danger'" size="small">
@@ -409,13 +407,19 @@ onBeforeUnmount(() => {
 .alert-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .block { margin-top: 12px; }
 .chart { height: 260px; }
-.funnel { padding: 8px 4px 2px; }
+.funnel { padding: 4px 4px 0; display: flex; flex-direction: column; justify-content: space-around; }
 .funnel-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .funnel-stage { width: 68px; font-size: 12px; color: #475569; text-align: right; flex: none; }
 .funnel-bar-area { flex: 1; min-width: 0; }
 .funnel-bar { height: 18px; border-radius: 3px; min-width: 22px; transition: width .4s ease; }
 .funnel-num { width: 44px; font-size: 13px; font-weight: 600; color: #1e293b; flex: none; }
 .funnel-hint { margin-top: 6px; }
+.equal { display: flex; flex-wrap: wrap; }
+.equal > .el-col { display: flex; flex-direction: column; }
+.equal > .el-col > .el-card { flex: 1; display: flex; flex-direction: column; width: 100%; }
+.equal > .el-col > .el-card > :deep(.el-card__body) { flex: 1; display: flex; flex-direction: column; }
+.health-fill { flex: 1; display: flex; flex-direction: column; }
+.health-fill > :deep(.el-card__body) { flex: 1; }
 .kw-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
 .kw { margin: 0; }
 </style>
