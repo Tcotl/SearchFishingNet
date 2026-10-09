@@ -1,0 +1,2 @@
+# SearchFishingNet 核心包依赖（建议直接复用 Browser Web Crawler/.venv）
+playwright>=1.40

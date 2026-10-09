@@ -1,0 +1,81 @@
+{
+  "metadata": {
+    "keyword": "钉钉下载",
+    "timestamp": "2026-09-23T20:00:00",
+    "total_results": 8,
+    "engines": {
+      "baidu": {"count": 4},
+      "bing": {"count": 4}
+    }
+  },
+  "results": {
+    "baidu": [
+      {
+        "rank": 1,
+        "title": "钉钉DingTalk - 官方下载",
+        "url": "https://www.dingtalk.com/",
+        "domain": "dingtalk.com",
+        "description": "钉钉官方下载页面，含Windows/Mac客户端。",
+        "display_url": "www.dingtalk.com"
+      },
+      {
+        "rank": 2,
+        "title": "钉钉最新版下载_钉钉官方版免费下载",
+        "url": "https://dingtalk-app.top/download",
+        "domain": "dingtalk-app.top",
+        "description": "钉钉最新版极速下载，绿色免安装。",
+        "display_url": "dingtalk-app.top"
+      },
+      {
+        "rank": 3,
+        "title": "钉钉电脑版下载向日葵远程版",
+        "url": "https://sunlogin-dd.xyz/setup.exe",
+        "domain": "sunlogin-dd.xyz",
+        "description": "一键下载安装，办公必备远程软件合集。",
+        "display_url": "sunlogin-dd.xyz"
+      },
+      {
+        "rank": 4,
+        "title": "企业如何选型协同办公平台 - 知乎",
+        "url": "https://www.zhihu.com/question/123456",
+        "domain": "zhihu.com",
+        "description": "协同办公平台对比分析。",
+        "display_url": "www.zhihu.com"
+      }
+    ],
+    "bing": [
+      {
+        "rank": 1,
+        "title": "Download DingTalk",
+        "url": "https://page.dingtalk.com/wow/dingtalk/act/download",
+        "domain": "page.dingtalk.com",
+        "description": "DingTalk official download page.",
+        "display_url": "page.dingtalk.com"
+      },
+      {
+        "rank": 2,
+        "title": "2026年协同办公软件评测",
+        "url": "https://www.ithome.com/html/office/2026review.html",
+        "domain": "ithome.com",
+        "description": "IT之家年度协同办公软件横评。",
+        "display_url": "www.ithome.com"
+      },
+      {
+        "rank": 3,
+        "title": "dingtalk破解版免安装下载",
+        "url": "https://dingtalk-crack.cyou/pc",
+        "domain": "dingtalk-crack.cyou",
+        "description": "钉钉破解版免安装绿色版下载，去广告。",
+        "display_url": "dingtalk-crack.cyou"
+      },
+      {
+        "rank": 4,
+        "title": "某企业官网",
+        "url": "https://corp-news.example-news.com/notice",
+        "domain": "corp-news.example-news.com",
+        "description": "企业公告页面。",
+        "display_url": "corp-news.example-news.com"
+      }
+    ]
+  }
+}

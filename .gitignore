@@ -1,0 +1,25 @@
+# ---- 运行数据（不入库）----
+# data/ 含：隔离恶意样本（data/samples，禁止上传代码托管平台）、API Key 与登录凭据
+# （data/config）、情报库、取证截图（83M+）。部署后由平台自动重建。
+data/
+
+# ---- 虚拟环境 / 依赖 ----
+.venv/
+backend/.venv/
+Browser Web Crawler/.venv
+node_modules/
+
+# ---- 前端构建产物（build 生成）----
+frontend/dist/
+
+# ---- 爬虫运行产物（截图/抓取缓存，非源码）----
+Browser Web Crawler/*.png
+Browser Web Crawler/*_*.txt
+Browser Web Crawler/*.json
+
+# ---- Python / 系统 ----
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+nohup.out
