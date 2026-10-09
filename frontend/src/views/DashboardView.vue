@@ -98,7 +98,7 @@
       <el-col :span="8">
         <el-card shadow="never" header="高频命中关键词" class="block">
           <div class="kw-wrap">
-            <el-tag v-for="[kw, n] in summary?.top_keywords ?? []" :key="kw" class="kw" type="info">
+            <el-tag v-for="[kw, n] in summary?.top_keywords ?? []" :key="kw" class="kw" type="info" disable-transitions>
               {{ kw }} · {{ n }}
             </el-tag>
             <el-empty v-if="!summary?.top_keywords?.length" description="暂无数据" :image-size="50" />

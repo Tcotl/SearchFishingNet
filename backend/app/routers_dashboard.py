@@ -70,6 +70,6 @@ def summary():
              "ai_verdict": (r.get("ai_verdict") or {}).get("verdict"),
              "ai_confidence": (r.get("ai_verdict") or {}).get("confidence"),
              "created": r.get("created")}
-            for r in records[:10]
-        ],
+            for r in records if r.get("status") != "false_positive"
+        ][:10],
     }
